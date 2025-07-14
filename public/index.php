@@ -16,6 +16,9 @@ require_once ROOT_PATH . '/includes/helper.php';
 // Memuat kelas App dan memulai aplikasi
 require_once ROOT_PATH . '/app/core/App.php';
 
+// Memuat Composer autoloader
+require_once ROOT_PATH . '/vendor/autoload.php';
+
 // Inisialisasi session jika belum dimulai
 if (session_status() == PHP_SESSION_NONE) {
     session_start();

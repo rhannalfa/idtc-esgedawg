@@ -27,6 +27,16 @@
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" required>
             </div>
+            <div class="form-group">
+                <label for="role_id">Role:</label>
+                <select id="role_id" name="role_id" required>
+                    <!-- Asumsi Anda akan mengisi ini dari database atau secara manual -->
+                    <option value="">Pilih Role</option>
+                    <option value="1">Jamaah</option> <!-- Contoh ID role -->
+                    <option value="2">Peternak</option>
+                    <option value="3">Admin</option>
+                </select>
+            </div>
             <button type="submit" class="button">Simpan Pengguna</button>
             <a href="/users" class="button button-secondary">Batal</a>
         </form>

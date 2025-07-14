@@ -22,22 +22,64 @@ class App
     {
         // --- Daftarkan rute-rute aplikasi Anda di sini ---
 
-        // Rute untuk halaman utama
+        // Rute Umum
         $this->router->add('GET', '/', ['HomeController', 'index']);
 
-        // Rute untuk manajemen pengguna (sesuai folder users/ di views)
-        $this->router->add('GET', '/users', ['UserController', 'index']);         // Menampilkan daftar pengguna
-        $this->router->add('GET', '/users/create', ['UserController', 'create']); // Menampilkan form tambah pengguna
-        $this->router->add('POST', '/users', ['UserController', 'store']);        // Menyimpan pengguna baru
-        $this->router->add('GET', '/users/{id}', ['UserController', 'show']);     // Menampilkan detail pengguna
-        $this->router->add('GET', '/users/{id}/edit', ['UserController', 'edit']);// Menampilkan form edit pengguna
-        $this->router->add('POST', '/users/{id}/update', ['UserController', 'update']); // Memperbarui pengguna (menggunakan POST untuk kesederhanaan, bisa juga PUT)
-        $this->router->add('POST', '/users/{id}/delete', ['UserController', 'destroy']); // Menghapus pengguna (menggunakan POST untuk kesederhanaan, bisa juga DELETE)
-
-        // Rute untuk otentikasi
+        // Rute untuk Otentikasi
         $this->router->add('GET', '/login', ['AuthController', 'showLogin']);
         $this->router->add('POST', '/login', ['AuthController', 'handleLogin']);
         $this->router->add('GET', '/logout', ['AuthController', 'logout']);
+        // Anda mungkin perlu rute untuk registrasi juga
+
+        // Rute untuk Manajemen Pengguna (User Management - bisa diakses admin/user sendiri)
+        $this->router->add('GET', '/users', ['UserController', 'index']);
+        $this->router->add('GET', '/users/create', ['UserController', 'create']);
+        $this->router->add('POST', '/users', ['UserController', 'store']);
+        $this->router->add('GET', '/users/{id}', ['UserController', 'show']);
+        $this->router->add('GET', '/users/{id}/edit', ['UserController', 'edit']);
+        $this->router->add('POST', '/users/{id}/update', ['UserController', 'update']);
+        $this->router->add('POST', '/users/{id}/delete', ['UserController', 'destroy']);
+
+        // Rute untuk Modul Qurban (User/Jamaah)
+        $this->router->add('GET', '/qurban', ['QurbanController', 'index']); // Daftar hewan qurban
+        $this->router->add('GET', '/qurban/{id}', ['QurbanController', 'show']); // Detail hewan qurban
+        $this->router->add('GET', '/qurban/{id}/buy', ['QurbanController', 'createTransaction']); // Form transaksi
+        $this->router->add('POST', '/qurban/transaction', ['QurbanController', 'storeTransaction']); // Proses transaksi & Midtrans
+        $this->router->add('GET', '/qurban/history', ['QurbanController', 'history']); // Riwayat transaksi qurban
+        // $this->router->add('GET', '/qurban/certificate/{id}', ['QurbanController', 'printCertificate']);
+
+        // Rute untuk Modul Zakat (User/Jamaah)
+        $this->router->add('GET', '/zakat/donate', ['ZakatController', 'create']); // Form zakat
+        $this->router->add('POST', '/zakat/donate', ['ZakatController', 'store']); // Proses zakat & Midtrans
+        $this->router->add('GET', '/zakat/history', ['ZakatController', 'history']); // Riwayat transaksi zakat
+        // $this->router->add('GET', '/zakat/certificate/{id}', ['ZakatController', 'printCertificate']);
+
+        // Rute untuk Modul Haji/Umrah (User/Jamaah)
+        $this->router->add('GET', '/hajj-savings', ['HajjSavingController', 'index']); // Daftar tabungan haji
+        $this->router->add('GET', '/hajj-savings/create', ['HajjSavingController', 'create']); // Form buat tabungan
+        $this->router->add('POST', '/hajj-savings', ['HajjSavingController', 'store']); // Simpan tabungan
+        $this->router->add('GET', '/hajj-savings/{id}/deposit', ['HajjSavingController', 'depositForm']); // Form setor dana
+        $this->router->add('POST', '/hajj-savings/deposit', ['HajjSavingController', 'processDeposit']); // Proses setor dana & Midtrans
+
+        // Rute untuk Admin Panel (Perlu otorisasi Admin)
+        $this->router->add('GET', '/admin/dashboard', ['AdminController', 'dashboard']);
+        $this->router->add('GET', '/admin/users', ['AdminController', 'manageUsers']);
+        $this->router->add('GET', '/admin/transactions/ibadah', ['AdminController', 'viewAllIbadahTransactions']);
+        $this->router->add('GET', '/admin/transactions/midtrans', ['AdminController', 'viewAllMidtransTransactions']);
+        $this->router->add('POST', '/admin/transactions/{type}/{id}/verify', ['AdminController', 'verifyTransaction']);
+        // $this->router->add('GET', '/admin/reports/{type}', ['AdminController', 'generateReport']);
+
+        // Rute untuk Peternak Panel (Perlu otorisasi Peternak)
+        $this->router->add('GET', '/peternak/dashboard', ['PeternakController', 'dashboard']);
+        $this->router->add('GET', '/peternak/animals/create', ['PeternakController', 'createAnimal']);
+        $this->router->add('POST', '/peternak/animals', ['PeternakController', 'storeAnimal']);
+        $this->router->add('GET', '/peternak/animals/manage', ['PeternakController', 'manageAnimals']);
+        $this->router->add('POST', '/peternak/transactions/{id}/update-status', ['PeternakController', 'updateTransactionStatus']);
+        // $this->router->add('POST', '/peternak/transactions/{id}/upload-certificate', ['PeternakController', 'uploadCertificate']);
+
+        // Rute untuk Midtrans Webhook (ini adalah endpoint POST yang akan dihubungi Midtrans)
+        $this->router->add('POST', '/midtrans/webhook', ['MidtransWebhookController', 'handle']);
+
         // --- Akhir pendaftaran rute ---
 
         // Mendispatch permintaan menggunakan router

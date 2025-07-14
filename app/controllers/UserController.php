@@ -18,8 +18,14 @@ class UserController
      */
     public function index()
     {
-        $users = $this->userModel->getAllUsers();
-        view('users/index', ['users' => $users]);
+        $users = $this->userModel->getAllUsers(); // Ini mengambil semua user
+        $usersWithRoles = [];
+        foreach ($users as $user) {
+            // Untuk setiap user, ambil data lengkap dengan role_name
+            $userWithRole = $this->userModel->getUserWithRole($user['id']);
+            $usersWithRoles[] = $userWithRole;
+        }
+        view('users/index', ['users' => $usersWithRoles]); // Kirim data user dengan role
     }
 
     /**
@@ -39,31 +45,37 @@ class UserController
             $name = $_POST['name'] ?? '';
             $email = $_POST['email'] ?? '';
             $password = $_POST['password'] ?? '';
+            $roleId = $_POST['role_id'] ?? null; // Pastikan ini bisa null dulu untuk debugging jika form tidak mengirimnya
 
             // Validasi sederhana
-            if (empty($name) || empty($email) || empty($password)) {
-                // Handle error, misalnya tampilkan pesan ke view
-                view('users/create', ['error' => 'Semua kolom harus diisi.']);
+            if (empty($name) || empty($email) || empty($password) || empty($roleId)) { // Tambahkan validasi roleId
+                view('users/create', ['error' => 'Semua kolom harus diisi, termasuk Role.']);
                 return;
             }
 
-            // Hash password sebelum menyimpan
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
             $data = [
                 'name' => $name,
                 'email' => $email,
                 'password' => $hashedPassword,
-                'created_at' => date('Y-m-d H:i:s'), // Tambahkan timestamp
+                'role_id' => $roleId,
+                'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ];
 
-            if ($this->userModel->createUser($data)) {
-                header('Location: /users'); // Redirect ke daftar pengguna
+            // Panggil metode createUser dari model
+            $result = $this->userModel->createUser($data);
+
+            if ($result) {
+                header('Location: /users');
                 exit();
             } else {
-                // Handle error penyimpanan
-                view('users/create', ['error' => 'Gagal menyimpan pengguna.']);
+                $errorMessage = 'Gagal menyimpan pengguna. Silakan coba lagi.';
+                if (isset($this->userModel->lastError)) {
+                    $errorMessage .= " Debug Info: " . $this->userModel->lastError; // <--- TAMBAHKAN INI
+                }
+                view('users/create', ['error' => $errorMessage]);
             }
         }
     }
@@ -74,7 +86,7 @@ class UserController
      */
     public function show($id)
     {
-        $user = $this->userModel->getUserById($id);
+        $user = $this->userModel->getUserWithRole($id); // <--- PASTIKAN INI DIGUNAKAN
         view('users/show', ['user' => $user]);
     }
 

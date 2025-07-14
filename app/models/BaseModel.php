@@ -5,7 +5,8 @@
 require_once __DIR__ . '/../core/Database.php';
 
 class BaseModel
-{
+{   
+    public $lastError;
     protected $db; // Properti untuk menyimpan objek PDO
     protected $table; // Nama tabel yang terkait dengan model ini
 
@@ -64,10 +65,12 @@ class BaseModel
                 $stmt->bindParam(":$key", $value);
             }
             $stmt->execute();
-            return $this->db->lastInsertId();
+            return $this->db->lastInsertId(); // Mengembalikan ID yang baru disisipkan
         } catch (PDOException $e) {
-            error_log("Error membuat data baru di {$this->table}: " . $e->getMessage());
-            return false;
+            // Tangkap PDOException dan simpan pesan errornya
+            $this->lastError = "Database Error in BaseModel->create(): " . $e->getMessage() . " (SQLSTATE: " . $e->getCode() . ")";
+            error_log("PDOException in BaseModel->create(): " . $this->lastError); // Log ke server error log
+            return false; // Kembalikan false untuk menandakan kegagalan
         }
     }
 

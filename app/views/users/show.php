@@ -16,6 +16,7 @@
                 <p><strong>ID:</strong> <?php echo htmlspecialchars($user['id']); ?></p>
                 <p><strong>Nama:</strong> <?php echo htmlspecialchars($user['name']); ?></p>
                 <p><strong>Email:</strong> <?php echo htmlspecialchars($user['email']); ?></p>
+                <p><strong>Role:</strong> <?php echo htmlspecialchars($user['role_name'] ?? 'N/A'); ?></p>
                 <p><strong>Dibuat Pada:</strong> <?php echo htmlspecialchars($user['created_at'] ?? 'N/A'); ?></p>
                 <p><strong>Diperbarui Pada:</strong> <?php echo htmlspecialchars($user['updated_at'] ?? 'N/A'); ?></p>
             </div>

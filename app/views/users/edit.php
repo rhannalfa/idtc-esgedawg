@@ -28,6 +28,16 @@
                     <label for="password">Password (kosongkan jika tidak ingin mengubah):</label>
                     <input type="password" id="password" name="password">
                 </div>
+                <div class="form-group">
+                    <label for="role_id">Role:</label>
+                    <select id="role_id" name="role_id" required>
+                        <!-- Asumsi Anda akan mengisi ini dari database atau secara manual -->
+                        <option value="">Pilih Role</option>
+                        <option value="1" <?php echo (isset($user['role_id']) && $user['role_id'] == 1) ? 'selected' : ''; ?>>Jamaah</option>
+                        <option value="2" <?php echo (isset($user['role_id']) && $user['role_id'] == 2) ? 'selected' : ''; ?>>Peternak</option>
+                        <option value="3" <?php echo (isset($user['role_id']) && $user['role_id'] == 3) ? 'selected' : ''; ?>>Admin</option>
+                    </select>
+                </div>
                 <button type="submit" class="button">Perbarui Pengguna</button>
                 <a href="/users" class="button button-secondary">Batal</a>
             </form>
