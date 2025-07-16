@@ -57,11 +57,10 @@ class App
         // Rute untuk Modul Haji/Umrah (User/Jamaah)
         $this->router->add('GET', '/hajj-savings', ['HajjSavingController', 'index']); // Daftar tabungan haji
         $this->router->add('GET', '/hajj-savings/create', ['HajjSavingController', 'create']); // Form buat tabungan
-        $this->router->add('POST', '/hajj-savings', ['HajjSavingController', 'store']); // Simpan tabungan
+        $this->router->add('POST', '/hajj-savings/store', ['HajjSavingController', 'store']); // <--- PASTIKAN BARIS INI ADA!
         $this->router->add('GET', '/hajj-savings/{id}/deposit', ['HajjSavingController', 'depositForm']); // Form setor dana
-        $this->router->add('POST', '/hajj-savings/deposit', ['HajjSavingController', 'processDeposit']); // Proses setor dana & Midtrans
+        $this->router->add('POST', '/hajj-savings/deposit/process', ['HajjSavingController', 'processDeposit']); // Proses setor dana
 
-        // Rute untuk Admin Panel (Perlu otorisasi Admin)
         $this->router->add('GET', '/admin/dashboard', ['AdminController', 'dashboard']);
         $this->router->add('GET', '/admin/users', ['AdminController', 'manageUsers']);
         $this->router->add('GET', '/admin/transactions/ibadah', ['AdminController', 'viewAllIbadahTransactions']);

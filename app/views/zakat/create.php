@@ -18,13 +18,16 @@
         <form action="/zakat/donate" method="POST">
             <div class="form-group">
                 <label for="type">Jenis Zakat:</label>
-                <select id="type" name="type" required>
-                    <option value="">Pilih Jenis Zakat</option>
-                    <option value="zakat_fitrah">Zakat Fitrah</option>
-                    <option value="zakat_mal">Zakat Mal</option>
-                    <option value="zakat_penghasilan">Zakat Penghasilan</option>
-                    <option value="infaq">Infaq</option>
-                    <option value="sedekah">Sedekah</option>
+                <select id="type" name="zakat_type_id" required> <option value="">Pilih Jenis Zakat</option>
+                    <?php
+                    // Asumsi $zakatTypes adalah array objek/array asosiatif dari database
+                    // yang dikirim dari ZakatController.php
+                    if (!empty($zakatTypes)) {
+                        foreach ($zakatTypes as $zakatType) {
+                            echo '<option value="' . htmlspecialchars($zakatType['id']) . '">' . htmlspecialchars($zakatType['name']) . '</option>';
+                        }
+                    }
+                    ?>
                 </select>
             </div>
             <div class="form-group">
