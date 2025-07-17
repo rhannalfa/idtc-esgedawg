@@ -51,6 +51,27 @@ class HajjSaving extends BaseModel {
         }
     }
 
+    public function incrementAmount($id, $amount) {
+        try {
+            $stmt = $this->db->prepare("UPDATE {$this->table} SET current_amount = current_amount + :amount WHERE id = :id");
+            $stmt->bindParam(':amount', $amount, PDO::PARAM_STR);
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+
+            // Setelah update, cek apakah target tercapai
+            $saving = $this->find($id);
+            if ($saving && $saving['current_amount'] >= $saving['target_amount']) {
+                $this->update($id, ['status' => 'completed']);
+            }
+
+            return true;
+        } catch (PDOException $e) {
+            error_log("Gagal menambahkan dana ke tabungan haji ID {$id}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+
     // Metode find() dan update() sudah diwarisi dari BaseModel.
     // Jika Anda ingin menggunakan metode update dari BaseModel, Anda bisa memanggilnya
     // seperti: $this->update($id, $data); di controller atau di model ini.

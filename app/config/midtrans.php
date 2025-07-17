@@ -1,14 +1,13 @@
 <?php
-// app/config/midtrans.php
+require_once __DIR__ . '/../../vendor/autoload.php';
 
-// Pastikan file config/app.php sudah dimuat untuk fungsi loadEnv
-// Ini biasanya sudah dilakukan di public/index.php, jadi tidak perlu require_once di sini
-// require_once __DIR__ . '/app.php'; // Jika belum dimuat di public/index.php
+use Dotenv\Dotenv;
 
-return [
-    'server_key' => getenv('MIDTRANS_SERVER_KEY'),
-    'client_key' => getenv('MIDTRANS_CLIENT_KEY'),
-    'is_production' => filter_var(getenv('MIDTRANS_IS_PRODUCTION'), FILTER_VALIDATE_BOOLEAN),
-    'is_sanitized' => true, // Opsional, default true. Mengaktifkan sanitasi data transaksi.
-    'is_3ds' => true,       // Opsional, default true. Mengaktifkan 3D Secure untuk kartu kredit.
-];
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
+$dotenv->load();
+
+\Midtrans\Config::$serverKey = getenv('MIDTRANS_SERVER_KEY');
+\Midtrans\Config::$clientKey = getenv('MIDTRANS_CLIENT_KEY');
+\Midtrans\Config::$isProduction = getenv('MIDTRANS_IS_PRODUCTION') === 'true';
+\Midtrans\Config::$isSanitized = true;
+\Midtrans\Config::$is3ds = true;

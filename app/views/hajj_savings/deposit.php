@@ -23,7 +23,7 @@
                 <p>Sisa: Rp <?php echo number_format($saving['target_amount'] - $saving['current_amount'], 0, ',', '.'); ?></p>
             </div>
 
-            <form action="/hajj-savings/deposit" method="POST">
+            <form action="/hajj-savings/deposit/process" method="POST">
                 <input type="hidden" name="saving_id" value="<?php echo htmlspecialchars($saving['id']); ?>">
                 <div class="form-group">
                     <label for="amount">Jumlah Setoran (Rp):</label>

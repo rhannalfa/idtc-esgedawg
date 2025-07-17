@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/css/style.css">
     <!-- Midtrans Snap JS -->
     <script type="text/javascript"
-        src="https://app.midtrans.com/snap/snap.js"
+        src="https://app.sandbox.midtrans.com/snap/snap.js"
         data-client-key="<?php echo getenv('MIDTRANS_CLIENT_KEY'); ?>"></script>
 </head>
 <body>
@@ -21,6 +21,15 @@
             <button id="pay-button" class="button button-primary">Bayar Sekarang</button>
             <p style="margin-top: 20px;">Jumlah Setoran: Rp <?php echo number_format($amount ?? 0, 0, ',', '.'); ?></p>
             <p>ID Tabungan: <?php echo htmlspecialchars($savingId ?? 'N/A'); ?></p>
+
+            <!-- DEBUG (opsional, boleh dihapus) -->
+            <pre style="background:#eee;padding:10px;margin-top:20px;">
+Snap Token: <?php echo htmlspecialchars($snapToken); ?>
+
+Saving ID: <?php echo htmlspecialchars($savingId); ?>
+
+Amount: <?php echo htmlspecialchars($amount); ?>
+            </pre>
         <?php else: ?>
             <p style="color: red;">Gagal mendapatkan token pembayaran. Silakan coba lagi.</p>
         <?php endif; ?>
@@ -33,14 +42,28 @@
         document.getElementById('pay-button').onclick = function(){
             snap.pay('<?php echo $snapToken; ?>', {
                 onSuccess: function(result){
-                    alert("Setoran tabungan haji berhasil!");
-                    console.log(result);
-                    window.location.href = '/hajj-savings';
+                    fetch('/hajj-savings/confirm-payment', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `saving_id=<?php echo $savingId; ?>&amount=<?php echo $amount; ?>`
+                    }).then(() => {
+                        alert("Setoran tabungan haji berhasil!");
+                        window.location.href = '/hajj-savings';
+                    });
                 },
                 onPending: function(result){
-                    alert("Setoran tabungan haji Anda sedang menunggu konfirmasi!");
-                    console.log(result);
-                    window.location.href = '/hajj-savings';
+                    fetch('/hajj-savings/confirm-payment', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `saving_id=<?php echo $savingId; ?>&amount=<?php echo $amount; ?>`
+                    }).then(() => {
+                        alert("Setoran tabungan haji Anda sedang menunggu konfirmasi!");
+                        window.location.href = '/hajj-savings';
+                    });
                 },
                 onError: function(result){
                     alert("Setoran tabungan haji gagal!");

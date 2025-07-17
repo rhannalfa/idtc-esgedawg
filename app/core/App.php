@@ -52,6 +52,7 @@ class App
         $this->router->add('GET', '/zakat/donate', ['ZakatController', 'create']); // Form zakat
         $this->router->add('POST', '/zakat/donate', ['ZakatController', 'store']); // Proses zakat & Midtrans
         $this->router->add('GET', '/zakat/history', ['ZakatController', 'history']); // Riwayat transaksi zakat
+        
         // $this->router->add('GET', '/zakat/certificate/{id}', ['ZakatController', 'printCertificate']);
 
         // Rute untuk Modul Haji/Umrah (User/Jamaah)
@@ -60,6 +61,8 @@ class App
         $this->router->add('POST', '/hajj-savings/store', ['HajjSavingController', 'store']); // <--- PASTIKAN BARIS INI ADA!
         $this->router->add('GET', '/hajj-savings/{id}/deposit', ['HajjSavingController', 'depositForm']); // Form setor dana
         $this->router->add('POST', '/hajj-savings/deposit/process', ['HajjSavingController', 'processDeposit']); // Proses setor dana
+        $this->router->add('POST', '/hajj-savings/confirm-payment', ['HajjSavingController', 'confirmPayment']);
+
 
         $this->router->add('GET', '/admin/dashboard', ['AdminController', 'dashboard']);
         $this->router->add('GET', '/admin/users', ['AdminController', 'manageUsers']);

@@ -146,64 +146,92 @@ class HajjSavingController
      * Rute: POST /hajj-savings/deposit/process
      */
     public function processDeposit()
-    {
-        // Pastikan pengguna sudah login dan request adalah POST
-        if (!isset($_SESSION['user_id']) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirect('/login');
-            return;
-        }
+{
+    require_once __DIR__ . '/../config/midtrans.php';
 
-        $userId = $_SESSION['user_id'];
-        $savingId = $_POST['saving_id'] ?? null;
-        $amount = $_POST['amount'] ?? 0;
+    $savingId = $_POST['saving_id'];
+    $amount = intval($_POST['amount']);
 
-        // Cari tabungan yang akan disetor
-        $saving = $this->hajjSavingModel->find($savingId);
-
-        // Validasi: Pastikan tabungan ditemukan, milik pengguna, dan jumlah setoran valid
-        if (!$saving || $saving['user_id'] !== $userId || !is_numeric($amount) || (float)$amount <= 0) {
-            // Muat ulang form setoran dengan pesan error
-            view('hajj_savings/deposit', ['error' => 'Data setoran tidak valid.', 'saving' => $saving]);
-            return;
-        }
-
-        // Logika TANPA MIDTRANS: Langsung update saldo tabungan
-        $newCurrentAmount = $saving['current_amount'] + (float)$amount;
-        $updateData = [
-            'current_amount' => $newCurrentAmount,
-            // Perbarui status jika dana terkumpul sudah mencapai atau melebihi target
-            'status'         => ($newCurrentAmount >= $saving['target_amount']) ? 'completed' : 'active'
-        ];
-
-        // Panggil metode update() di model HajjSaving untuk memperbarui data
-        if ($this->hajjSavingModel->update($savingId, $updateData)) {
-            // Jika update berhasil:
-            // Catat aktivitas ke log status
-            $this->statusLogModel->create([
-                'loggable_type'    => 'HajjSaving',
-                'loggable_id'      => $savingId,
-                'old_status'       => $saving['status'],
-                'new_status'       => $updateData['status'],
-                'description'      => 'Setoran tabungan haji sebesar Rp ' . number_format($amount, 0, ',', '.') . '.',
-                'changed_by_user_id' => $userId
-            ]);
-            // Redirect ke halaman daftar tabungan dengan pesan sukses
-            redirect('/hajj-savings?success=deposit');
-        } else {
-            // Jika update gagal:
-            error_log("Failed to process deposit for hajj saving ID {$savingId} for user {$userId}.");
-            // Muat ulang form setoran dengan pesan error generik
-            view('hajj_savings/deposit', ['error' => 'Gagal memproses setoran tabungan. Silakan coba lagi.', 'saving' => $saving]);
-        }
-
-        /*
-        // --- BAGIAN MIDTRANS (DIKOMENTARI KARENA BELUM PAKAI) ---
-        // Jika nanti ingin mengaktifkan Midtrans, unkomentari kode ini dan hapus logika update manual di atas
-        // require_once __DIR__ . '/../../vendor/autoload.php';
-        // $midtransConfig = require __DIR__ . '/../../config/midtrans.php';
-        // ... (kode Midtrans lainnya) ...
-        */
+    // Validasi saving
+    $savingModel = new HajjSaving();
+    $saving = $savingModel->find($savingId);
+    if (!$saving) {
+        view('hajj_savings/deposit', ['error' => 'Tabungan tidak ditemukan']);
+        return;
     }
+
+    // Buat order_id unik
+    $orderId = 'HAJJ-' . time() . '-' . rand(1000, 9999);
+
+    // Simpan sementara order_id, saving_id, amount jika perlu di DB
+
+    // Data Snap
+    $params = [
+        'transaction_details' => [
+            'order_id' => $orderId,
+            'gross_amount' => $amount,
+        ],
+        'customer_details' => [
+            'first_name' => $_SESSION['user']['name'] ?? 'Nama Default',
+            'email' => $_SESSION['user']['email'] ?? 'email@default.com',
+        ]
+    ];
+
+    try {
+        $snapToken = \Midtrans\Snap::getSnapToken($params);
+        view('hajj_savings/payment_page', [
+        'snapToken' => $snapToken,
+        'savingId' => $savingId,
+        'amount' => $amount,
+    ]);
+    } catch (Exception $e) {
+        dd($e->getMessage());
+    }
+}
+
+public function confirmPayment()
+{
+    // Cek metode request
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405); // Method Not Allowed
+        echo "Metode tidak diizinkan";
+        exit;
+    }
+
+    $savingId = $_POST['saving_id'] ?? null;
+    $amount = $_POST['amount'] ?? null;
+
+    // Validasi input
+    if (!$savingId || !$amount || !is_numeric($amount)) {
+        http_response_code(400); // Bad Request
+        echo "Data tidak valid";
+        exit;
+    }
+
+    // Cek apakah tabungan ada
+    $saving = $this->hajjSavingModel->find($savingId);
+    if (!$saving) {
+        http_response_code(404);
+        echo "Tabungan tidak ditemukan";
+        exit;
+    }
+
+    // Tambah saldo tabungan
+    $this->hajjSavingModel->incrementAmount($savingId, (float)$amount);
+
+    // (Opsional) Tambahkan catatan log status
+    $this->statusLogModel->create([
+        'loggable_type'       => 'HajjSaving',
+        'loggable_id'         => $savingId,
+        'new_status'          => 'deposit',
+        'description'         => 'Setoran berhasil ditambahkan.',
+        'changed_by_user_id'  => $_SESSION['user_id'] ?? null
+    ]);
+
+    // Redirect
+    redirect('/hajj-savings?success=deposit');
+}
+
 
     // Metode opsional: Untuk memeriksa penyelesaian target (biasanya di cronjob/webhook)
     public function checkTargetCompletion()
