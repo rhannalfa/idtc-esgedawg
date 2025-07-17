@@ -1,146 +1,180 @@
 <?php
 // app/controllers/ZakatController.php
 
-// Memuat model-model yang dibutuhkan
 require_once __DIR__ . '/../models/ZakatTransaction.php';
-// require_once __DIR__ . '/../models/MidtransTransaction.php'; // Dikomentari karena belum pakai Midtrans
 require_once __DIR__ . '/../models/StatusLog.php';
 require_once __DIR__ . '/../models/ZakatType.php';
-// Memuat helper untuk fungsi view(), redirect()
-require_once __DIR__ . '/../../includes/helper.php'; // Pastikan file ini ada
+require_once __DIR__ . '/../models/ZakatFitrahDetail.php';
+require_once __DIR__ . '/../models/ZakatMalDetail.php';
+require_once __DIR__ . '/../../includes/helper.php';
 
 class ZakatController
 {
     private $zakatTransactionModel;
-    // private $midtransTransactionModel; // Dikomentari
     private $statusLogModel;
     private $zakatTypeModel;
+    private $fitrahDetailModel;
+    private $malDetailModel;
 
     public function __construct()
     {
         $this->zakatTransactionModel = new ZakatTransaction();
-        // $this->midtransTransactionModel = new MidtransTransaction(); // Dikomentari
         $this->statusLogModel = new StatusLog();
         $this->zakatTypeModel = new ZakatType();
+        $this->fitrahDetailModel = new ZakatFitrahDetail();
+        $this->malDetailModel = new ZakatMalDetail();
     }
 
-    /**
-     * Menampilkan form untuk membuat transaksi zakat.
-     * Fitur: Pilih jenis zakat: fitrah / mal / penghasilan, Input jumlah zakat.
-     */
     public function create()
     {
-        // session_start(); // Pastikan session_start() sudah dipanggil di awal aplikasi (misal di index.php/router)
         if (!isset($_SESSION['user_id'])) {
             redirect('/login');
         }
 
-        // Ambil semua jenis zakat dari database untuk dropdown
         $zakatTypes = $this->zakatTypeModel->getAllZakatTypes();
-
-        // Kirim data jenis zakat ke view
         view('zakat/create', ['zakatTypes' => $zakatTypes]);
     }
 
-    /**
-     * Memproses pembuatan transaksi zakat.
-     * TANPA MIDTRANS: Langsung simpan transaksi dengan status 'pending' (untuk verifikasi manual).
-     */
     public function store()
     {
-        // session_start(); // Pastikan session_start() sudah dipanggil di awal aplikasi (misal di index.php/router)
         if (!isset($_SESSION['user_id']) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
             redirect('/login');
         }
 
         $userId = $_SESSION['user_id'];
         $zakatTypeId = $_POST['zakat_type_id'] ?? '';
-        $amount = $_POST['amount'] ?? 0;
+        $amount = 0; // Nanti dihitung otomatis
 
-        // Validasi dasar
-        if (empty($zakatTypeId) || !is_numeric($zakatTypeId) || $amount <= 0) {
-            $zakatTypes = $this->zakatTypeModel->getAllZakatTypes(); // Muat ulang jenis zakat
-            view('zakat/create', ['error' => 'Jenis zakat dan jumlah harus diisi dengan benar.', 'zakatTypes' => $zakatTypes]);
+        if (empty($zakatTypeId) || !is_numeric($zakatTypeId)) {
+            $zakatTypes = $this->zakatTypeModel->getAllZakatTypes();
+            view('zakat/create', ['error' => 'Jenis zakat harus diisi dengan benar.', 'zakatTypes' => $zakatTypes]);
             return;
         }
 
-        // Validasi tambahan: Pastikan zakatTypeId benar-benar ada di database
-        $selectedZakatType = $this->zakatTypeModel->find($zakatTypeId); // Menggunakan metode find dari BaseModel
+        $selectedZakatType = $this->zakatTypeModel->find($zakatTypeId);
         if (!$selectedZakatType) {
-            $zakatTypes = $this->zakatTypeModel->getAllZakatTypes(); // Muat ulang jenis zakat
-            view('zakat/create', ['error' => 'Jenis zakat yang dipilih tidak valid.', 'zakatTypes' => $zakatTypes]);
+            $zakatTypes = $this->zakatTypeModel->getAllZakatTypes();
+            view('zakat/create', ['error' => 'Jenis zakat tidak ditemukan.', 'zakatTypes' => $zakatTypes]);
             return;
         }
 
-        // 1. Buat entri Zakat Transaction
+        $description = '';
+        $typeName = strtolower($selectedZakatType['name']);
+
+        if ($typeName === 'zakat fitrah') {
+            $namaKK = $_POST['nama_kepala_keluarga'] ?? '';
+            $jumlahOrang = (int) ($_POST['jumlah_anggota'] ?? 0);
+            $metode = $_POST['metode'] ?? 'tunai';
+
+            if ($jumlahOrang <= 0 || empty($metode)) {
+                $zakatTypes = $this->zakatTypeModel->getAllZakatTypes();
+                view('zakat/create', ['error' => 'Data zakat fitrah tidak lengkap.', 'zakatTypes' => $zakatTypes]);
+                return;
+            }
+
+            if ($metode === 'beras') {
+                $amount = 0; // Tidak ada nilai uang
+                $description = "Zakat fitrah $jumlahOrang orang, dibayar dengan beras 2.5kg per orang.";
+            } else {
+                $amount = 40000 * $jumlahOrang;
+                $description = "Zakat fitrah $jumlahOrang orang, dibayar tunai Rp 40.000 per orang.";
+            }
+
+        } elseif ($typeName === 'zakat mal') {
+            $kategori = $_POST['kategori'] ?? '';
+            $totalHarta = (float) ($_POST['total_harta'] ?? 0);
+            $persenZakat = (float) ($_POST['persen_zakat'] ?? 2.5);
+            $keterangan = $_POST['keterangan'] ?? '';
+
+            if (empty($kategori) || $totalHarta <= 0) {
+                $zakatTypes = $this->zakatTypeModel->getAllZakatTypes();
+                view('zakat/create', ['error' => 'Data zakat mal tidak lengkap.', 'zakatTypes' => $zakatTypes]);
+                return;
+            }
+
+            $amount = $totalHarta * ($persenZakat / 100);
+            $description = "Zakat mal kategori $kategori, total harta Rp $totalHarta, zakat $persenZakat%.";
+
+        } else {
+            $amount = (float) ($_POST['amount'] ?? 0);
+            $description = $_POST['description'] ?? 'Pembayaran zakat.';
+        }
+
         $zakatTransactionData = [
-            'user_id'       => $userId,
+            'user_id' => $userId,
             'zakat_type_id' => (int)$zakatTypeId,
-            'amount'        => (float)$amount,
-            'payment_method' => 'Manual Transfer', // Asumsi pembayaran manual/transfer
-            'status'        => 'pending',         // Status awal 'pending' untuk verifikasi manual
-            'description'   => 'Pembayaran zakat via aplikasi - Menunggu verifikasi.'
-            // 'midtrans_order_id' => null // Tidak digunakan jika tanpa Midtrans
+            'amount' => $amount,
+            'payment_method' => 'Manual Transfer',
+            'status' => 'pending',
+            'description' => $description
         ];
 
-        // Panggil metode createTransaction() yang ada di ZakatTransaction model
         $zakatTransactionId = $this->zakatTransactionModel->createTransaction($zakatTransactionData);
 
         if ($zakatTransactionId) {
-            // Transaksi berhasil dibuat di database
-            // Log status perubahan
+            // Log status awal
             $this->statusLogModel->create([
                 'loggable_type' => 'ZakatTransaction',
                 'loggable_id' => $zakatTransactionId,
                 'new_status' => 'pending_verification',
-                'description' => 'Transaksi zakat dibuat, menunggu verifikasi pembayaran manual.',
+                'description' => 'Transaksi zakat dibuat, menunggu verifikasi.',
                 'changed_by_user_id' => $userId
             ]);
 
-            // Redirect ke halaman sukses atau riwayat
+            // Simpan ke tabel detail jika fitrah
+            if ($typeName === 'zakat fitrah') {
+                $this->fitrahDetailModel->createDetail([
+                    'zakat_transaction_id' => $zakatTransactionId,
+                    'kepala_keluarga' => $namaKK,
+                    'jumlah_anggota' => $jumlahOrang,
+                    'metode' => $metode,
+                    'total_zakat' => $amount
+                ]);
+            }
+
+            // Simpan ke tabel detail jika mal
+            if ($typeName === 'zakat mal') {
+                $this->malDetailModel->createDetail([
+                    'zakat_transaction_id' => $zakatTransactionId,
+                    'kategori' => $kategori,
+                    'total_harta' => $totalHarta,
+                    'persen_zakat' => $persenZakat,
+                    'keterangan' => $keterangan
+                ]);
+            }
+
             redirect('/zakat/history?success=true');
         } else {
-            // Jika gagal menyimpan ke database
-            $error = 'Gagal menyimpan transaksi zakat ke database. Silakan coba lagi.';
-            error_log("Failed to create zakat transaction for user " . ($userId ?? 'Guest') . " with data: " . json_encode($zakatTransactionData));
-
-            $zakatTypes = $this->zakatTypeModel->getAllZakatTypes(); // Muat ulang jenis zakat
+            $error = 'Gagal menyimpan transaksi zakat.';
+            error_log("Failed to create zakat transaction: " . json_encode($zakatTransactionData));
+            $zakatTypes = $this->zakatTypeModel->getAllZakatTypes();
             view('zakat/create', ['error' => $error, 'zakatTypes' => $zakatTypes]);
         }
     }
 
-    /**
-     * Menampilkan riwayat transaksi zakat untuk pengguna yang login.
-     * Fitur: Lihat status (menunggu, disetujui, atau ditolak).
-     */
     public function history()
     {
-        // session_start(); // Pastikan session_start() sudah dipanggil di awal aplikasi (misal di index.php/router)
         if (!isset($_SESSION['user_id'])) {
             redirect('/login');
         }
+
         $userId = $_SESSION['user_id'];
-        // Pastikan getTransactionsByUserId ada di ZakatTransaction model dan join dengan zakat_types untuk nama
         $transactions = $this->zakatTransactionModel->getTransactionsByUserId($userId);
         view('zakat/history', ['transactions' => $transactions]);
     }
 
-    // Metode untuk mencetak bukti bayar/sertifikat (opsional)
     public function printCertificate($transactionId)
     {
-        // Logika untuk mengambil data transaksi dan membuat PDF
-        // Asumsi user sudah login
         if (!isset($_SESSION['user_id'])) {
             redirect('/login');
         }
+
         $transaction = $this->zakatTransactionModel->find($transactionId);
 
-        // Pastikan transaksi milik user yang login atau admin
-        if (!$transaction || ($transaction['user_id'] != $_SESSION['user_id'] && ($_SESSION['role_id'] ?? 0) != 2 /* admin role */)) {
+        if (!$transaction || ($transaction['user_id'] != $_SESSION['user_id'] && ($_SESSION['role_id'] ?? 0) != 2)) {
             redirect('/zakat/history?error=not_authorized');
         }
 
-        // Load view cetak atau generate PDF
         view('zakat/certificate', ['transaction' => $transaction]);
     }
 }
